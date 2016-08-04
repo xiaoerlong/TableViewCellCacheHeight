@@ -99,4 +99,39 @@
     return objc_getAssociatedObject(self, _cmd);
 }
 
++ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        Method reloadData = class_getInstanceMethod(self, @selector(reloadData));
+        Method xel_reloadData = class_getInstanceMethod(self, @selector(xel_reloadData));
+        Method reloadRows = class_getInstanceMethod(self, @selector(reloadRowsAtIndexPaths:withRowAnimation:));
+        Method xel_reloadRows = class_getInstanceMethod(self, @selector(xel_reloadRowsAtIndexPaths:withRowAnimation:));
+        
+        
+        method_exchangeImplementations(reloadData, xel_reloadData);
+        method_exchangeImplementations(reloadRows, xel_reloadRows);
+    });
+}
+
+- (void)xel_reloadData {
+    if (self.cacheHeightDictionary != nil) {
+        [self.cacheHeightDictionary removeAllObjects];
+    }
+    [self xel_reloadData];
+}
+
+- (void)xel_reloadRowsAtIndexPaths:(NSArray<NSIndexPath *> *)indexPaths withRowAnimation:(UITableViewRowAnimation *)animation {
+    if (indexPaths) {
+        [indexPaths enumerateObjectsUsingBlock:^(NSIndexPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            NSString *cacheHeightKey = @(obj.section).stringValue;
+            NSMutableArray *sectionCacheHeightArray = self.cacheHeightDictionary[cacheHeightKey];
+            if (sectionCacheHeightArray != nil && sectionCacheHeightArray.count > obj.row) {
+                [self.cacheHeightDictionary removeObjectForKey:cacheHeightKey];
+            }
+        }];
+    }
+    
+    [self xel_reloadRowsAtIndexPaths:indexPaths withRowAnimation:animation];
+}
+
 @end
